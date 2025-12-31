@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Games - Tic Tac Toe{% endblock %}
+
+{% block content %}
+<div class="game-list">
+    <div class="header">
+        <h1>Games</h1>
+        <button id="new-game-btn" class="btn btn-primary">New Game</button>
+    </div>
+
+    <div id="message" class="message" style="display: none;"></div>
+
+    {% if games.is_empty() %}
+        <p class="no-games">No games yet. Start a new game!</p>
+    {% else %}
+        <table class="games-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Current Player</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="games-tbody">
+                {% for game in games %}
+                <tr>
+                    <td>{{ game.id }}</td>
+                    <td>
+                        <span class="status status-{{ game.status }}">
+                            {% if game.status == "in_progress" %}In Progress
+                            {% else if game.status == "x_wins" %}X Wins
+                            {% else if game.status == "o_wins" %}O Wins
+                            {% else %}Draw{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ game.current_player }}</td>
+                    <td>{{ game.created_at.format("%Y-%m-%d %H:%M") }}</td>
+                    <td>
+                        <a href="/game/{{ game.id }}" class="btn btn-small">Play</a>
+                        <button class="btn btn-small btn-danger delete-btn" data-id="{{ game.id }}">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('new-game-btn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/api/games', { method: 'POST' });
+        const game = await response.json();
+        window.location.href = '/game/' + game.id;
+    } catch (error) {
+        showMessage('Failed to create game', 'error');
+    }
+});
+
+document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+        const id = e.target.dataset.id;
+        if (confirm('Delete this game?')) {
+            try {
+                await fetch('/api/games/' + id, { method: 'DELETE' });
+                e.target.closest('tr').remove();
+            } catch (error) {
+                showMessage('Failed to delete game', 'error');
+            }
+        }
+    });
+});
+
+function showMessage(text, type) {
+    const msg = document.getElementById('message');
+    msg.textContent = text;
+    msg.className = 'message ' + type;
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 3000);
+}
+</script>
+{% endblock %}

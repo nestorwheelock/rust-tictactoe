@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Game #{{ game.id }} - Tic Tac Toe{% endblock %}
+
+{% block content %}
+<div class="game-container">
+    <div class="game-header">
+        <h1>Game #{{ game.id }}</h1>
+        <a href="/" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    <div id="message" class="message" style="display: none;"></div>
+
+    <div class="game-info">
+        <p>Current Player: <strong id="current-player">{{ game.current_player }}</strong></p>
+        <p>Status: <span id="status" class="status status-{{ game.status }}">
+            {% if game.status == "in_progress" %}In Progress
+            {% else if game.status == "x_wins" %}X Wins!
+            {% else if game.status == "o_wins" %}O Wins!
+            {% else %}Draw!{% endif %}
+        </span></p>
+    </div>
+
+    <div class="board" id="board">
+        {% for i in 0..9 %}
+        <div class="cell" data-position="{{ i }}">
+            {% if game.board.0[i] != "" %}{{ game.board.0[i] }}{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="game-actions">
+        <button id="new-game-btn" class="btn btn-primary">New Game</button>
+        <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+    </div>
+</div>
+
+<script>
+const gameId = {{ game.id }};
+let gameStatus = '{{ game.status }}';
+
+document.querySelectorAll('.cell').forEach(cell => {
+    cell.addEventListener('click', async (e) => {
+        if (gameStatus !== 'in_progress') {
+            showMessage('Game is finished!', 'info');
+            return;
+        }
+
+        const position = parseInt(e.target.dataset.position);
+
+        try {
+            const response = await fetch('/api/games/' + gameId + '/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ position })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                updateBoard(data);
+            } else {
+                showMessage(data.error, 'error');
+            }
+        } catch (error) {
+            showMessage('Failed to make move', 'error');
+        }
+    });
+});
+
+document.getElementById('new-game-btn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/api/games', { method: 'POST' });
+        const game = await response.json();
+        window.location.href = '/game/' + game.id;
+    } catch (error) {
+        showMessage('Failed to create game', 'error');
+    }
+});
+
+document.getElementById('refresh-btn').addEventListener('click', () => {
+    window.location.reload();
+});
+
+function updateBoard(data) {
+    gameStatus = data.status;
+
+    document.getElementById('current-player').textContent = data.current_player;
+
+    const statusEl = document.getElementById('status');
+    statusEl.className = 'status status-' + data.status;
+    if (data.status === 'in_progress') statusEl.textContent = 'In Progress';
+    else if (data.status === 'x_wins') statusEl.textContent = 'X Wins!';
+    else if (data.status === 'o_wins') statusEl.textContent = 'O Wins!';
+    else statusEl.textContent = 'Draw!';
+
+    document.querySelectorAll('.cell').forEach((cell, i) => {
+        cell.textContent = data.board[i] || '';
+        if (data.board[i]) {
+            cell.classList.add('filled', 'player-' + data.board[i]);
+        }
+    });
+
+    if (data.status !== 'in_progress') {
+        showMessage(statusEl.textContent, 'success');
+    }
+}
+
+function showMessage(text, type) {
+    const msg = document.getElementById('message');
+    msg.textContent = text;
+    msg.className = 'message ' + type;
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 3000);
+}
+</script>
+{% endblock %}
