@@ -42,11 +42,11 @@ async fn main() {
     let app = Router::new()
         // Frontend routes
         .route("/", get(handlers::pages::game_list))
-        .route("/game/{id}", get(handlers::pages::game_detail))
+        .route("/game/:id", get(handlers::pages::game_detail))
         // API routes
         .route("/api/games", get(handlers::api::list_games).post(handlers::api::create_game))
-        .route("/api/games/{id}", get(handlers::api::get_game).delete(handlers::api::delete_game))
-        .route("/api/games/{id}/move", post(handlers::api::make_move))
+        .route("/api/games/:id", get(handlers::api::get_game).delete(handlers::api::delete_game))
+        .route("/api/games/:id/move", post(handlers::api::make_move))
         // Static files
         .nest_service("/static", ServeDir::new("static"))
         .with_state(pool);
